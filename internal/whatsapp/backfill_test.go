@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/eddmann/whatsapp-cli/internal/store"
+	waStore "go.mau.fi/whatsmeow/store"
 )
 
 func TestBuildBackfillAnchorUsesOldestStoredMessage(t *testing.T) {
@@ -87,5 +88,26 @@ func TestBeginBackfillRequestRejectsConcurrentRequest(t *testing.T) {
 	_, _, err = client.beginBackfillRequest("67890@s.whatsapp.net")
 	if err == nil {
 		t.Fatalf("expected concurrent request error")
+	}
+}
+
+func TestConfigureFullHistorySyncSetsPairingPayload(t *testing.T) {
+	originalRequireFullSync := waStore.DeviceProps.RequireFullSync
+	originalConfig := waStore.DeviceProps.HistorySyncConfig
+	t.Cleanup(func() {
+		waStore.DeviceProps.RequireFullSync = originalRequireFullSync
+		waStore.DeviceProps.HistorySyncConfig = originalConfig
+	})
+
+	ConfigureFullHistorySync(3650, 10240)
+
+	if !waStore.DeviceProps.GetRequireFullSync() {
+		t.Fatalf("expected RequireFullSync to be enabled")
+	}
+	if waStore.DeviceProps.GetHistorySyncConfig().GetFullSyncDaysLimit() != 3650 {
+		t.Fatalf("expected 3650 full sync days, got %d", waStore.DeviceProps.GetHistorySyncConfig().GetFullSyncDaysLimit())
+	}
+	if waStore.DeviceProps.GetHistorySyncConfig().GetFullSyncSizeMbLimit() != 10240 {
+		t.Fatalf("expected 10240MB size limit, got %d", waStore.DeviceProps.GetHistorySyncConfig().GetFullSyncSizeMbLimit())
 	}
 }
